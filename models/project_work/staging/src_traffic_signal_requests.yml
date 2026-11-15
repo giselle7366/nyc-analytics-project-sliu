@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw data for the Group 15 project
+    database: shulianliu-cis-baruch
+    schema: group_15_raw_data
+
+    tables:
+      - name: source_traffic_signal_requests
+        description: |
+          NYC traffic signal requests.
+          One row per request.
