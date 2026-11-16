@@ -11,9 +11,7 @@ WITH distinct_problems AS (
     SELECT DISTINCT
         complaint_type,
         descriptor AS problem_component
-
     FROM {{ ref('stg_traffic_signal_requests') }}
-
     WHERE complaint_type IS NOT NULL
       AND descriptor IS NOT NULL
 
@@ -25,7 +23,6 @@ enriched AS (
         complaint_type,
         problem_component,
 
-        -- Derived problem condition
         CASE
             WHEN LOWER(problem_component) LIKE '%controller%'
               OR LOWER(problem_component) LIKE '%communication%'
@@ -48,7 +45,6 @@ enriched AS (
             ELSE 'Other'
         END AS problem_condition,
 
-        -- Derived broader category
         CASE
             WHEN LOWER(problem_component) LIKE '%pedestrian%'
               OR LOWER(problem_component) LIKE '%ped multiple%'
@@ -79,12 +75,13 @@ enriched AS (
 problem_dimension AS (
 
     SELECT
-        {{ dbt_utils.generate_surrogate_key([
-            'complaint_type',
-            'problem_component',
-            'problem_condition',
-            'problem_category'
-        ]) }} AS problem_key,
+        ROW_NUMBER() OVER (
+            ORDER BY
+                complaint_type,
+                problem_component,
+                problem_condition,
+                problem_category
+        ) AS problem_key,
 
         complaint_type,
         problem_component,
@@ -93,7 +90,23 @@ problem_dimension AS (
 
     FROM enriched
 
+),
+
+null_placeholder AS (
+
+    SELECT
+        CAST(-1 AS INT64) AS problem_key,
+        CAST(NULL AS STRING) AS complaint_type,
+        CAST(NULL AS STRING) AS problem_component,
+        CAST(NULL AS STRING) AS problem_condition,
+        CAST(NULL AS STRING) AS problem_category
+
 )
 
 SELECT *
 FROM problem_dimension
+
+UNION ALL
+
+SELECT *
+FROM null_placeholder
