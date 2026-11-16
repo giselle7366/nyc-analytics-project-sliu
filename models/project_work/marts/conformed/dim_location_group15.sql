@@ -1,8 +1,8 @@
 {{ config(alias='dim_location') }}
 
--- Conformed location dimension shared by Traffic Signal Requests
--- and Motor Vehicle Collisions.
--- Grain: one row per unique combination of zip_code and borough.
+-- Group 15 | Milestone 4
+-- Shared Location Dimension
+-- Grain: one row per unique zip_code / borough combination
 
 WITH traffic_signal_locations AS (
 
@@ -28,27 +28,24 @@ collision_locations AS (
 
 all_locations AS (
 
-    SELECT
-        zip_code,
-        borough
+    SELECT zip_code, borough
     FROM traffic_signal_locations
 
     UNION DISTINCT
 
-    SELECT
-        zip_code,
-        borough
+    SELECT zip_code, borough
     FROM collision_locations
 
 ),
 
-location_dimension AS (
+numbered AS (
 
     SELECT
-        {{ dbt_utils.generate_surrogate_key([
-            'zip_code',
-            'borough'
-        ]) }} AS location_key,
+        ROW_NUMBER() OVER (
+            ORDER BY
+                COALESCE(zip_code, ''),
+                COALESCE(borough, '')
+        ) AS location_key,
 
         zip_code,
         borough
@@ -60,14 +57,14 @@ location_dimension AS (
 null_placeholder AS (
 
     SELECT
-        '-1' AS location_key,
+        CAST(-1 AS INT64) AS location_key,
         CAST(NULL AS STRING) AS zip_code,
         CAST(NULL AS STRING) AS borough
 
 )
 
 SELECT *
-FROM location_dimension
+FROM numbered
 
 UNION ALL
 

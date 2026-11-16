@@ -12,37 +12,33 @@ WITH contributing_factors AS (
 
     UNION DISTINCT
 
-    SELECT contributing_factor_2 AS contributing_factor
+    SELECT contributing_factor_2
     FROM {{ ref('stg_motor_vehicle_collisions') }}
     WHERE contributing_factor_2 IS NOT NULL
 
     UNION DISTINCT
 
-    SELECT contributing_factor_3 AS contributing_factor
+    SELECT contributing_factor_3
     FROM {{ ref('stg_motor_vehicle_collisions') }}
     WHERE contributing_factor_3 IS NOT NULL
 
     UNION DISTINCT
 
-    SELECT contributing_factor_4 AS contributing_factor
+    SELECT contributing_factor_4
     FROM {{ ref('stg_motor_vehicle_collisions') }}
     WHERE contributing_factor_4 IS NOT NULL
 
     UNION DISTINCT
 
-    SELECT contributing_factor_5 AS contributing_factor
+    SELECT contributing_factor_5
     FROM {{ ref('stg_motor_vehicle_collisions') }}
     WHERE contributing_factor_5 IS NOT NULL
 
 ),
 
-factor_dimension AS (
+categorized AS (
 
     SELECT
-        {{ dbt_utils.generate_surrogate_key([
-            'contributing_factor'
-        ]) }} AS contributing_factor_key,
-
         contributing_factor,
 
         CASE
@@ -82,7 +78,35 @@ factor_dimension AS (
 
     FROM contributing_factors
 
+),
+
+numbered AS (
+
+    SELECT
+        ROW_NUMBER() OVER (
+            ORDER BY contributing_factor
+        ) AS contributing_factor_key,
+
+        contributing_factor,
+        factor_category
+
+    FROM categorized
+
+),
+
+null_placeholder AS (
+
+    SELECT
+        CAST(-1 AS INT64) AS contributing_factor_key,
+        CAST(NULL AS STRING) AS contributing_factor,
+        'Unknown' AS factor_category
+
 )
 
 SELECT *
-FROM factor_dimension
+FROM numbered
+
+UNION ALL
+
+SELECT *
+FROM null_placeholder

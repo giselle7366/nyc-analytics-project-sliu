@@ -1,7 +1,7 @@
 {{ config(alias='dim_collision_severity') }}
 
 -- Group 15 | Milestone 4
--- Dimension: Collision Severity
+-- Collision Severity Dimension
 -- Grain: one row per severity category and injury/fatality combination
 
 WITH collision_severity AS (
@@ -20,14 +20,15 @@ WITH collision_severity AS (
 
 ),
 
-final AS (
+numbered AS (
 
     SELECT
-        TO_HEX(MD5(CONCAT(
-            severity_category, '|',
-            CAST(has_injury AS STRING), '|',
-            CAST(has_fatality AS STRING)
-        ))) AS collision_severity_key,
+        ROW_NUMBER() OVER (
+            ORDER BY
+                severity_category,
+                has_injury,
+                has_fatality
+        ) AS collision_severity_key,
 
         severity_category,
         has_injury,
@@ -35,7 +36,22 @@ final AS (
 
     FROM collision_severity
 
+),
+
+null_placeholder AS (
+
+    SELECT
+        CAST(-1 AS INT64) AS collision_severity_key,
+        'Unknown' AS severity_category,
+        FALSE AS has_injury,
+        FALSE AS has_fatality
+
 )
 
 SELECT *
-FROM final
+FROM numbered
+
+UNION ALL
+
+SELECT *
+FROM null_placeholder

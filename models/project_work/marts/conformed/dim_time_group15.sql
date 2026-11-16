@@ -1,6 +1,8 @@
--- Time dimension shared by Motor Vehicle Collisions
--- and Traffic Signal Requests.
--- Grain: one row per unique hour/minute combination.
+{{ config(alias='dim_time') }}
+
+-- Group 15 | Milestone 4
+-- Shared Time Dimension
+-- Grain: one row per unique hour/minute combination
 
 WITH collision_times AS (
 
@@ -38,11 +40,7 @@ all_times AS (
 time_dimension AS (
 
     SELECT
-        {{ dbt_utils.generate_surrogate_key([
-            'hour',
-            'minute'
-        ]) }} AS time_key,
-
+        (hour * 100) + minute AS time_key,
         hour,
         minute,
 
