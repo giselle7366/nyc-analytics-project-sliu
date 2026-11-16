@@ -14,27 +14,51 @@ WITH collisions AS (
 joined AS (
 
     SELECT
+
         c.collision_id,
 
-        -- Foreign keys
-        COALESCE(d.date_key, -1) AS date_key,
-        COALESCE(t.time_key, -1) AS time_key,
-        COALESCE(l.location_key, -1) AS location_key,
-        COALESCE(s.collision_severity_key, -1) AS collision_severity_key,
+        -- Date / Time / Location keys
+        COALESCE(SAFE_CAST(d.date_key AS INT64), -1) AS date_key,
+        COALESCE(SAFE_CAST(t.time_key AS INT64), -1) AS time_key,
+        COALESCE(SAFE_CAST(l.location_key AS INT64), -1) AS location_key,
 
-        -- Vehicle type foreign keys
-        COALESCE(v1.vehicle_type_key, -1) AS vehicle_type_1_key,
-        COALESCE(v2.vehicle_type_key, -1) AS vehicle_type_2_key,
-        COALESCE(v3.vehicle_type_key, -1) AS vehicle_type_3_key,
-        COALESCE(v4.vehicle_type_key, -1) AS vehicle_type_4_key,
-        COALESCE(v5.vehicle_type_key, -1) AS vehicle_type_5_key,
+        -- Collision severity key
+        COALESCE(
+            SAFE_CAST(s.collision_severity_key AS INT64),
+            -1
+        ) AS collision_severity_key,
 
-        -- Contributing factor foreign keys
-        COALESCE(f1.contributing_factor_key, -1) AS contributing_factor_1_key,
-        COALESCE(f2.contributing_factor_key, -1) AS contributing_factor_2_key,
-        COALESCE(f3.contributing_factor_key, -1) AS contributing_factor_3_key,
-        COALESCE(f4.contributing_factor_key, -1) AS contributing_factor_4_key,
-        COALESCE(f5.contributing_factor_key, -1) AS contributing_factor_5_key,
+        -- Vehicle type keys
+        COALESCE(SAFE_CAST(v1.vehicle_type_key AS INT64), -1)
+            AS vehicle_type_1_key,
+
+        COALESCE(SAFE_CAST(v2.vehicle_type_key AS INT64), -1)
+            AS vehicle_type_2_key,
+
+        COALESCE(SAFE_CAST(v3.vehicle_type_key AS INT64), -1)
+            AS vehicle_type_3_key,
+
+        COALESCE(SAFE_CAST(v4.vehicle_type_key AS INT64), -1)
+            AS vehicle_type_4_key,
+
+        COALESCE(SAFE_CAST(v5.vehicle_type_key AS INT64), -1)
+            AS vehicle_type_5_key,
+
+        -- Contributing factor keys
+        COALESCE(SAFE_CAST(f1.contributing_factor_key AS INT64), -1)
+            AS contributing_factor_1_key,
+
+        COALESCE(SAFE_CAST(f2.contributing_factor_key AS INT64), -1)
+            AS contributing_factor_2_key,
+
+        COALESCE(SAFE_CAST(f3.contributing_factor_key AS INT64), -1)
+            AS contributing_factor_3_key,
+
+        COALESCE(SAFE_CAST(f4.contributing_factor_key AS INT64), -1)
+            AS contributing_factor_4_key,
+
+        COALESCE(SAFE_CAST(f5.contributing_factor_key AS INT64), -1)
+            AS contributing_factor_5_key,
 
         -- Measures
         c.number_of_persons_injured,
@@ -48,21 +72,21 @@ joined AS (
 
     FROM collisions c
 
-    -- Date
+    -- Date dimension
     LEFT JOIN {{ ref('dim_date_group15') }} d
         ON c.crash_date = d.full_date
 
-    -- Time
+    -- Time dimension
     LEFT JOIN {{ ref('dim_time_group15') }} t
         ON c.crash_hour = t.hour
        AND c.crash_minute = t.minute
 
-    -- Location
+    -- Location dimension
     LEFT JOIN {{ ref('dim_location_group15') }} l
         ON c.zip_code = l.zip_code
        AND c.borough = l.borough
 
-    -- Collision severity
+    -- Collision severity dimension
     LEFT JOIN {{ ref('dim_collision_severity_group15') }} s
         ON (
             CASE
@@ -71,10 +95,11 @@ joined AS (
                 ELSE 'No Injury'
             END
         ) = s.severity_category
+
        AND (c.number_of_persons_injured > 0) = s.has_injury
        AND (c.number_of_persons_killed > 0) = s.has_fatality
 
-    -- Vehicle types
+    -- Vehicle type dimensions
     LEFT JOIN {{ ref('dim_vehicle_type_group15') }} v1
         ON c.vehicle_type_1 = v1.vehicle_type
 
@@ -90,7 +115,7 @@ joined AS (
     LEFT JOIN {{ ref('dim_vehicle_type_group15') }} v5
         ON c.vehicle_type_5 = v5.vehicle_type
 
-    -- Contributing factors
+    -- Contributing factor dimensions
     LEFT JOIN {{ ref('dim_contributing_factor_group15') }} f1
         ON c.contributing_factor_1 = f1.contributing_factor
 
@@ -111,11 +136,14 @@ joined AS (
 final AS (
 
     SELECT
+
+        -- Fact surrogate key
         ROW_NUMBER() OVER (
             ORDER BY collision_id
         ) AS collision_fact_key,
 
         collision_id,
+
         date_key,
         time_key,
         location_key,
