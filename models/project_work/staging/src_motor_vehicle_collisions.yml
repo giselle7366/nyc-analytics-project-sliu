@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw data for the Group 15 project
+    database: shulianliu-cis-baruch
+    schema: group_15_raw_data
+
+    tables:
+      - name: source_motor_vehicle_collisions
+        description: |
+          NYC Motor Vehicle Collisions data.
+          One row per collision.
+
+  - name: geo_us_boundaries
+    description: Google public dataset of US ZIP code boundaries used to fill missing boroughs from collision coordinates.
+    database: bigquery-public-data
+    schema: geo_us_boundaries
+
+    tables:
+      - name: zip_codes
